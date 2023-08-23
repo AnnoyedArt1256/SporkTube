@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<head>
+<meta charset="UTF-8">
+<style>
+button {
+   font-size: 2em;
+}
+input {
+   font-size: 2em;
+}
+#vidthing {
+    
+    padding: 10px o;
+    border-bottom: 1px #ccc dotted;
+    list-style: none;
+    overflow: auto;
+    
+    
+    
+}
+
+#vidthumb{
+    
+    float: left;
+    width: 30%;
+    
+}
+
+#vidthumb img{
+    
+    width: 100%;
+    padding: 3px;
+    border: solid #ccc 1px;
+    
+}
+
+#viddata {
+    
+    float:right;
+    width: 69%;
+    
+}
+</style>
+</head>
+<body>
+<div id="client">
+<button onclick="home()">Home</button>
+<button onclick="show(false,false,true)">Channel Page</button>
+<button onclick="show(false,true,false)">Video Page</button>
+<br>
+<input type="search" id="search" placeholder="">
+<button onclick="searchPage=1;search(document.getElementById('search').value)">Search!</button>
+<div id="rec"></div>
+<div id="vid" hidden></div>
+<div id="chnl" hidden></div>
+</div>
+<script>
+API_WEB = "https://onion.tube/api/v1"
+
+var searchPage = 1;
+
+function htmlEscape(str) {
+    return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+}
+
+function channel(id) {
+  document.getElementById("vid").hidden = true;
+  document.getElementById("chnl").hidden = false;
+  document.getElementById("rec").hidden = true;
+  var req = new XMLHttpRequest();
+  req.overrideMimeType("application/json");
+  req.open('GET', API_WEB+"/channels/" + id, true);
+  req.onload = function () {
+    var data = JSON.parse(req.responseText);
+    console.log(data)
+    document.getElementById("chnl").innerHTML = "<h2>" + htmlEscape(data.author) +"</h2>"
+    document.getElementById("chnl").innerHTML += "<h3>" + htmlEscape(data.description) +"</h3>"
+  data.latestVideos.forEach(function (_) {
+    document.getElementById("chnl").innerHTML += "<div id=\"vidthing\">"
+    + "<div id=\"vidthumb\">" 
+    + "<img src='" + _.videoThumbnails[5].url + "'>"
+    + "</div>"
+    + "<div id=\"viddata\">" 
+    + "<a href=\"#\" onclick=\"watchvideo('" + _.videoId + "')\">" + htmlEscape(_.title) + "</a>"
+    + "<p> By "
+    + htmlEscape(_.author)
+    + " | Uploaded " + htmlEscape(_.publishedText) + " | " + htmlEscape(_.viewCount) + " views</p>"
+    + "</div>"
+    + "</div>"
+    + "<br>";
+  });
+  };
+  req.send(null);
+}
+function watchvideo(id) {
+  document.getElementById("vid").hidden = false;
+  document.getElementById("chnl").hidden = true;
+  document.getElementById("rec").hidden = true;
+  var req = new XMLHttpRequest();
+  req.overrideMimeType("application/json");
+  req.open('GET', API_WEB+"/videos/" + id, true);
+  req.onload = function () {
+    var data2 = JSON.parse(req.responseText);
+    size = data2.formatStreams[1].size.split("x");
+    type = data2.formatStreams[1].type.split(";")[0];
+    vidurl = data2.formatStreams[1].url;
+    document.getElementById("vid").innerHTML = "<h2>" + htmlEscape(data2.title) +"</h2>"
+    document.getElementById("vid").innerHTML += "<p> By " + "<a href=\"#\" onclick=\"channel('" + data2.authorId + "')\">" + htmlEscape(data2.author) + "</a>" + " | Uploaded " + htmlEscape(data2.publishedText) + " | " + htmlEscape(data2.viewCount) + " views</p>" // "<p> By " + data2.author + " | Uploaded " + data2.publishedText + "</p>"
+    document.getElementById("vid").innerHTML += "<video width=\"" + size[0] + "\" height=\"" + size[1] + "\" controls>" + "<source src=\"" + vidurl + "\" type=\"" + type + "\">" + "</video>";
+  data2.recommendedVideos.forEach(function (_) {
+    document.getElementById("vid").innerHTML += "<div id=\"vidthing\">"
+    + "<div id=\"vidthumb\">" 
+    + "<img src='" + _.videoThumbnails[5].url + "'>"
+    + "</div>"
+    + "<div id=\"viddata\">" 
+    + "<a href=\"#\" onclick=\"watchvideo('" + _.videoId + "')\">" + htmlEscape(_.title) + "</a>"
+    + "<p> By " + htmlEscape(_.author) + " | Uploaded " + htmlEscape(_.publishedText) + "</p>"
+    + "</div>"
+    + "</div>"
+    + "<br>";
+  });
+  };
+  req.send(null);
+}
+function search(id) {
+  console.log(id);
+  document.getElementById("vid").hidden = true;
+  document.getElementById("chnl").hidden = true;
+  document.getElementById("rec").hidden = false;
+   document.getElementById("rec").innerHTML = "<h2>Page " + searchPage + "</h2>";
+  var req = new XMLHttpRequest();
+  req.overrideMimeType("application/json");
+  req.open('GET', API_WEB+"/search?q=\""+id+"\"&page="+searchPage, true);
+  req.onload = function () {
+    var data = JSON.parse(req.responseText);
+    document.getElementById("rec").innerHTML += "<button onclick=\"searchPage++,search('"+id+"');\">Next Page</button>" + "<button onclick=\"if(searchPage>1){searchPage--;search('"+id+"');}\">Prev Page</button>";
+    data.forEach(function (_) {
+      if (_.type == "video")
+            document.getElementById("rec").innerHTML += "<div id=\"vidthing\">"
+    + "<div id=\"vidthumb\">" 
+    + "<img src='" + _.videoThumbnails[5].url + "'>"
+    + "</div>"
+    + "<div id=\"viddata\">" 
+    + "<a href=\"#\" onclick=\"watchvideo('" + _.videoId + "')\">" + htmlEscape(_.title) + "</a>"
+    + "<p> By "
+    + "<a href=\"#\" onclick=\"channel('" + _.authorId + "')\">" + htmlEscape(_.author) + "</a>"
+    + " | Uploaded " + htmlEscape(_.publishedText) + " | " + htmlEscape(_.viewCount) + " views</p>"
+    + "</div>"
+    + "</div>"
+    + "<br>";
+    });
+  };
+  req.send(null);
+}
+function home() {
+  document.getElementById("vid").hidden = true;
+  document.getElementById("chnl").hidden = true;
+  document.getElementById("rec").hidden = false;
+var req = new XMLHttpRequest();
+req.overrideMimeType("application/json");
+req.open('GET', API_WEB+"/popular", true);
+req.onload = function () {
+  var data = JSON.parse(req.responseText);
+  document.getElementById("rec").innerHTML = "";
+  data.forEach(function (_) {
+    document.getElementById("rec").innerHTML += "<div id=\"vidthing\">"
+    + "<div id=\"vidthumb\">" 
+    + "<img src='" + _.videoThumbnails[5].url + "'>"
+    + "</div>"
+    + "<div id=\"viddata\">" 
+    + "<a href=\"#\" onclick=\"watchvideo('" + _.videoId + "')\">" + htmlEscape(_.title) + "</a>"
+    + "<p> By "
+    + "<a href=\"#\" onclick=\"channel('" + _.authorId + "')\">" + htmlEscape(_.author) + "</a>"
+    + " | Uploaded " + htmlEscape(_.publishedText) + " | " + htmlEscape(_.viewCount) + " views</p>"
+    + "</div>"
+    + "</div>"
+    + "<br>";
+  });
+};
+req.send(null);
+}
+function show(a,b,c) {
+  document.getElementById("rec").hidden = !a;
+  document.getElementById("vid").hidden = !b;
+  document.getElementById("chnl").hidden = !c;
+}
+home();
+</script>
+</body>
